@@ -61,12 +61,12 @@ int main(int argc, char* argv[]) {
   }
 
   assert(sqlite::Exec(db, R"sql(
-      CREATE TABLE a (
-        x INTEGER PRIMARY KEY,
-        y INTEGER,
-        z TEXT
-      );
-    )sql"));
+    CREATE TABLE a (
+      x INTEGER PRIMARY KEY,
+      y INTEGER,
+      z TEXT
+    );
+  )sql"));
 
   {
     sqlite::Statement stmt(db, R"sql(

@@ -15,3 +15,6 @@ concurrency-tolerant versions of `sqlite3_prepare_v2`, `sqlite3_step`, and
 the returned tuples of rows that are read, and which already has the headers for
 `<optional>` and `<string_view>` that don't need to be backfilled with
 non-stdlib equivalents.
+
+This was created as a dogfood library to make using sqlite non-excruciating.
+Contributions welcome!
