@@ -127,6 +127,14 @@ int main(int argc, char* argv[]) {
     assert(std::get<0>(*row) == 1);
     assert(!a.GetRow<int>().has_value());
     assert(a.done());
+    // Two statements in a row is also not ok.
+    a = sqlite::Statement(db, "select 2; select 3;");
+    assert(!a.ok());
+    // ...unless we say we don't care about the rest of the sql string.
+    a = sqlite::Statement(db, "select 4; select 5;", false);
+    assert(a.ok());
+    a = sqlite::Statement(db, "select 4; literally& anything * here!", false);
+    assert(a.ok());
   }
 
   {
