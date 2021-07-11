@@ -113,9 +113,21 @@ int main(int argc, char* argv[]) {
   assert(sqlite::Exec(db, ";;begin;;;rollback; select 1        ;   "));
   assert(sqlite::ExecRC(db, "   select 1; asdf") == SQLITE_ERROR);
 
-  // Only the first statement in the text provided to the Statement constructor
-  // is looked at.
-  assert(sqlite::Statement(db, "select 1; this part is invalid sql").ok());
+  {
+    // Garbage after the first statement in the sql text provided to the Statement
+    // constructor is still looked at.
+    sqlite::Statement a(db, "select 1; this part is invalid sql");
+    assert(!a.ok());
+    a.Reset();
+    // After resetting, the Statement is ok
+    assert(a.ok());
+    // ...but the first statement still compiled and is usable.
+    auto row = a.GetRow<int>();
+    assert(row.has_value());
+    assert(std::get<0>(*row) == 1);
+    assert(!a.GetRow<int>().has_value());
+    assert(a.done());
+  }
 
   {
     // Ensure that statements are finalized correctly.

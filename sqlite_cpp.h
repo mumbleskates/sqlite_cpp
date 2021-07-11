@@ -258,18 +258,23 @@ class Statement {
   class SinkCopyIterator;
 
  public:
-  Statement(sqlite3* db, std::string_view sql);
+  Statement(sqlite3* db, std::string_view sql, bool must_compile_all = true);
   Statement(const Statement&) = delete;
   Statement& operator=(const Statement&) = delete;
   Statement(Statement&& move_from) noexcept;
   Statement& operator=(Statement&& move_from) noexcept;
   ~Statement();
 
+  inline void Reset() {
+    sqlite3_reset(stmt_);
+    rc_ = stmt_ == nullptr ? SQLITE_ERROR : SQLITE_OK;
+  }
+
   // Binds values to the statement, returning false if an error occurs. String
   // values are copied.
   template <typename... Params>
   bool BindCopy(const Params&... params) {
-    sqlite3_reset(stmt_);
+    Reset();
     return (rc_ = detail::BindTupleParamsCopy(stmt_, std::tie(params...))) ==
            SQLITE_OK;
   }
@@ -278,14 +283,14 @@ class Statement {
   // values are copied.
   template <typename TupleParams>
   bool BindTupleCopy(const TupleParams& params) {
-    sqlite3_reset(stmt_);
+    Reset();
     return (rc_ = detail::BindTupleParamsCopy(stmt_, params)) == SQLITE_OK;
   }
 
   // Binds values to the statement, returning false if an error occurs.
   template <typename... Params>
   bool Bind(const Params&... params) {
-    sqlite3_reset(stmt_);
+    Reset();
     return (rc_ = detail::BindTupleParams(stmt_, std::tie(params...))) ==
            SQLITE_OK;
   }
@@ -293,7 +298,7 @@ class Statement {
   // Binds values to the statement, returning false if an error occurs.
   template <typename TupleParams>
   bool BindTuple(const TupleParams& params) {
-    sqlite3_reset(stmt_);
+    Reset();
     return (rc_ = detail::BindTupleParams(stmt_, params)) == SQLITE_OK;
   }
 
@@ -301,7 +306,7 @@ class Statement {
   // be a std::string, a "C string literal", or an int giving the column number.
   template <typename Name, typename Value>
   bool SetCopy(Name name, Value value) {
-    sqlite3_reset(stmt_);
+    Reset();
     return (rc_ = detail::BindParam<true>(stmt_, detail::ColIndex(stmt_, name),
                                           value)) == SQLITE_OK;
   }
@@ -310,7 +315,7 @@ class Statement {
   // be a std::string, a "C string literal", or an int giving the column number.
   template <typename Name, typename Value>
   bool Set(Name name, Value value) {
-    sqlite3_reset(stmt_);
+    Reset();
     return (rc_ = detail::BindParam<false>(stmt_, detail::ColIndex(stmt_, name),
                                            value)) == SQLITE_OK;
   }
@@ -403,7 +408,7 @@ class Statement {
     explicit Rowset(Statement* s) : s_(s) {}
 
     RowIterator<Cols...> begin() {
-      sqlite3_reset(s_->stmt_);
+      s_->Reset();
       RowIterator<Cols...> it(s_);
       ++it;
       return it;
