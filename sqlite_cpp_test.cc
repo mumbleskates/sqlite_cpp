@@ -97,6 +97,7 @@ int main(int argc, char* argv[]) {
       std::string z = zz.has_value() ? "'" + *zz + "'" : "null";
       results << x << ", " << y << ", " << z << std::endl;
     }
+    assert(stmt.done());
     std::cout << results.str() << std::endl;
     assert(results.str() ==
            "1, 4, 'asdf'\n"
