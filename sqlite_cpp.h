@@ -15,6 +15,7 @@
 #include <string>
 #include <string_view>
 #include <tuple>
+#include <utility>
 
 #include "sqlite3.h"
 #include "sqlite_blocking.h"
@@ -22,6 +23,38 @@
 namespace sqlite {
 
 using int64 = sqlite3_int64;
+
+// Subclasses of std::string and std::string_view to represent a string
+// containing unicode data. Text can be implicitly cast to a std::string but
+// must be explicitly cast the other way around.
+class TextView : public std::string_view {
+ public:
+  using std::string_view::operator=;
+  TextView() noexcept = default;
+  TextView(const TextView& copy_from) noexcept = default;
+  TextView(const char* data, size_t size) noexcept
+      : std::string_view(data, size) {}
+  TextView(const char* data) : std::string_view(data) {}
+  explicit TextView(const std::string_view& copy_from)
+      : std::string_view(copy_from) {}
+};
+
+class Text : public std::string {
+ public:
+  using std::string::string;
+  using std::string::operator=;
+  Text(const Text&) = default;
+  Text(Text&&) noexcept = default;
+  explicit Text(const std::string& copy_from) : std::string(copy_from) {}
+  explicit Text(std::string&& move_from) noexcept
+      : std::string(std::forward<std::string>(move_from)) {}
+  // implicit conversion to TextView to match std::string
+  operator TextView() const noexcept { return TextView(data(), size()); }
+  // conversion to std::string_view must be explicit to avoid function ambiguity
+  explicit operator std::string_view() const noexcept {
+    return std::string_view(data(), size());
+  }
+};
 
 // Only thrown by output iterators.
 struct SqliteException : public std::runtime_error {
@@ -83,19 +116,19 @@ struct ColumnReader<std::string_view> {
 };
 
 template <>
-struct ColumnReader<std::u8string> {
-  static std::u8string Read(sqlite3_stmt* stmt, int position) {
-    return std::u8string(
-        reinterpret_cast<const char8_t*>(sqlite3_column_text(stmt, position)),
+struct ColumnReader<Text> {
+  static Text Read(sqlite3_stmt* stmt, int position) {
+    return Text(
+        reinterpret_cast<const char*>(sqlite3_column_text(stmt, position)),
         sqlite3_column_bytes(stmt, position));
   }
 };
 
 template <>
-struct ColumnReader<std::u8string_view> {
-  static std::u8string_view Read(sqlite3_stmt* stmt, int position) {
-    return std::u8string_view(
-        reinterpret_cast<const char8_t*>(sqlite3_column_text(stmt, position)),
+struct ColumnReader<TextView> {
+  static TextView Read(sqlite3_stmt* stmt, int position) {
+    return TextView(
+        reinterpret_cast<const char*>(sqlite3_column_text(stmt, position)),
         sqlite3_column_bytes(stmt, position));
   }
 };
@@ -174,7 +207,7 @@ int BindParam(sqlite3_stmt* stmt, int position, std::string_view param) {
 }
 
 template <bool CopyOnBind>
-int BindParam(sqlite3_stmt* stmt, int position, std::u8string_view param) {
+int BindParam(sqlite3_stmt* stmt, int position, TextView param) {
   sqlite3_destructor_type copy_mode;
   if constexpr (CopyOnBind) {
     copy_mode = SQLITE_TRANSIENT;

@@ -76,7 +76,8 @@ int main(int argc, char* argv[]) {
     std::string thd = "300";
     stmt.Bind(100, 200, thd);
     assert(stmt.Run());
-    std::vector<std::tuple<int, std::optional<int>, std::optional<std::string>>>
+    std::vector<
+        std::tuple<int, std::optional<int>, std::optional<sqlite::Text>>>
         things = {
             {1, 4, "asdf"},
             {2, 4, "wabl"},
@@ -92,7 +93,7 @@ int main(int argc, char* argv[]) {
     std::stringstream results;
     sqlite::Statement stmt(db, R"sql(SELECT * FROM a ORDER BY x;)sql");
     for (const auto& [x, yy, zz] :
-         stmt.Rows<int, std::optional<int>, std::optional<std::string>>()) {
+         stmt.Rows<int, std::optional<int>, std::optional<sqlite::Text>>()) {
       std::string y = yy.has_value() ? std::to_string(*yy) : "null";
       std::string z = zz.has_value() ? "'" + *zz + "'" : "null";
       results << x << ", " << y << ", " << z << std::endl;
