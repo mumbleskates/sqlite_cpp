@@ -63,6 +63,9 @@ struct SqliteException : public std::runtime_error {
 
 namespace detail {
 
+// Non-null empty-string surrogate.
+constexpr static char kNothing = 0;
+
 // Template archetype for reading columns. This must be in a struct because, as
 // they only vary on return type, they cannot be deduced except by partial
 // specialization. (This lets us use optional<> for nullable easily.)
@@ -217,11 +220,9 @@ int BindParam(sqlite3_stmt* stmt, int position, TextView param) {
   // Force a non-null pointer to avoid binding SQL NULL. For BLOB types we use
   // bind_zeroblob but there is no good equivalent to this that produces a TEXT
   // value.
-  const char* data_ptr = param.empty()
-                             ? reinterpret_cast<const char*>(-1729)
-                             : reinterpret_cast<const char*>(param.data());
-  return sqlite3_bind_text64(stmt, position, data_ptr, param.size(), copy_mode,
-                             SQLITE_UTF8);
+  return sqlite3_bind_text64(stmt, position,
+                             (param.empty() ? &kNothing : param.data()),
+                             param.size(), copy_mode, SQLITE_UTF8);
 }
 
 template <bool CopyOnBind>
