@@ -64,7 +64,8 @@ Statement::Statement(sqlite3* db, std::string_view sql, bool must_compile_all) {
   }
 }
 
-Statement::Statement(Statement&& move_from) noexcept : stmt_(move_from.stmt_), rc_(move_from.rc_) {
+Statement::Statement(Statement&& move_from) noexcept
+    : stmt_(move_from.stmt_), rc_(move_from.rc_) {
   move_from.stmt_ = nullptr;
 }
 
