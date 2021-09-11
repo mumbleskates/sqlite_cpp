@@ -24,35 +24,40 @@ namespace sqlite {
 
 using int64 = sqlite3_int64;
 
-// Subclasses of std::string and std::string_view to represent a string
-// containing unicode data. Text can be implicitly cast to a std::string but
+// Replace these to change the implementation used
+// (for example, absl::string_view)
+using string = std::string;
+using string_view = std::string_view;
+
+// Subclasses of string and string_view to represent a string
+// containing unicode data. Text can be implicitly cast to a string but
 // must be explicitly cast the other way around.
-class TextView : public std::string_view {
+class TextView : public string_view {
  public:
-  using std::string_view::operator=;
+  using string_view::operator=;
   TextView() noexcept = default;
   TextView(const TextView& copy_from) noexcept = default;
   TextView(const char* data, size_t size) noexcept
-      : std::string_view(data, size) {}
-  TextView(const char* data) : std::string_view(data) {}
-  explicit TextView(const std::string_view& copy_from)
-      : std::string_view(copy_from) {}
+      : string_view(data, size) {}
+  TextView(const char* data) : string_view(data) {}
+  explicit TextView(const string_view& copy_from)
+      : string_view(copy_from) {}
 };
 
-class Text : public std::string {
+class Text : public string {
  public:
-  using std::string::string;
-  using std::string::operator=;
+  using string::string;
+  using string::operator=;
   Text(const Text&) = default;
   Text(Text&&) noexcept = default;
-  explicit Text(const std::string& copy_from) : std::string(copy_from) {}
-  explicit Text(std::string&& move_from) noexcept
-      : std::string(std::forward<std::string>(move_from)) {}
-  // implicit conversion to TextView to match std::string
+  explicit Text(const string& copy_from) : string(copy_from) {}
+  explicit Text(string&& move_from) noexcept
+      : string(std::forward<string>(move_from)) {}
+  // implicit conversion to TextView to match string
   operator TextView() const noexcept { return TextView(data(), size()); }
-  // conversion to std::string_view must be explicit to avoid function ambiguity
-  explicit operator std::string_view() const noexcept {
-    return std::string_view(data(), size());
+  // conversion to string_view must be explicit to avoid function ambiguity
+  explicit operator string_view() const noexcept {
+    return string_view(data(), size());
   }
 };
 
@@ -101,18 +106,18 @@ struct ColumnReader<double> {
 };
 
 template <>
-struct ColumnReader<std::string> {
-  static std::string Read(sqlite3_stmt* stmt, int position) {
-    return std::string(
+struct ColumnReader<string> {
+  static string Read(sqlite3_stmt* stmt, int position) {
+    return string(
         reinterpret_cast<const char*>(sqlite3_column_blob(stmt, position)),
         sqlite3_column_bytes(stmt, position));
   }
 };
 
 template <>
-struct ColumnReader<std::string_view> {
-  static std::string_view Read(sqlite3_stmt* stmt, int position) {
-    return std::string_view(
+struct ColumnReader<string_view> {
+  static string_view Read(sqlite3_stmt* stmt, int position) {
+    return string_view(
         reinterpret_cast<const char*>(sqlite3_column_blob(stmt, position)),
         sqlite3_column_bytes(stmt, position));
   }
@@ -195,7 +200,7 @@ int BindParam(sqlite3_stmt* stmt, int position, double param) {
 }
 
 template <bool CopyOnBind>
-int BindParam(sqlite3_stmt* stmt, int position, std::string_view param) {
+int BindParam(sqlite3_stmt* stmt, int position, string_view param) {
   if (param.empty()) {
     return sqlite3_bind_zeroblob(stmt, position, 0);
   }
@@ -263,7 +268,7 @@ int BindTupleParamsCopy(sqlite3_stmt* stmt, const Tuple& params) {
 inline int ColIndex(sqlite3_stmt* stmt, const char* name) {
   return sqlite3_bind_parameter_index(stmt, name);
 }
-inline int ColIndex(sqlite3_stmt* stmt, const std::string& name) {
+inline int ColIndex(sqlite3_stmt* stmt, const string& name) {
   return sqlite3_bind_parameter_index(stmt, name.data());
 }
 inline int ColIndex(sqlite3_stmt* stmt, int index) { return index; }
@@ -272,11 +277,11 @@ inline int ColIndex(sqlite3_stmt* stmt, int index) { return index; }
 
 // Execute a script that may contain multiple statements, ignoring any result
 // rows. Returns the sqlite return code (rc).
-int ExecRC(sqlite3* db, std::string_view script);
+int ExecRC(sqlite3* db, string_view script);
 
 // Execute a script that may contain multiple statements, ignoring any result
 // rows. Returns true if there is no error code.
-inline bool Exec(sqlite3* db, std::string_view script) {
+inline bool Exec(sqlite3* db, string_view script) {
   return ExecRC(db, script) == SQLITE_OK;
 }
 
@@ -292,7 +297,7 @@ class Statement {
   class SinkCopyIterator;
 
  public:
-  Statement(sqlite3* db, std::string_view sql, bool must_compile_all = true);
+  Statement(sqlite3* db, string_view sql, bool must_compile_all = true);
   Statement(const Statement&) = delete;
   Statement& operator=(const Statement&) = delete;
   Statement(Statement&& move_from) noexcept;
@@ -337,7 +342,7 @@ class Statement {
   }
 
   // Bind a specific named or numbered parameter to the statement. The name can
-  // be a std::string, a "C string literal", or an int giving the column number.
+  // be a string, a "C string literal", or an int giving the column number.
   template <typename Name, typename Value>
   bool SetCopy(Name name, Value value) {
     Reset();
@@ -346,7 +351,7 @@ class Statement {
   }
 
   // Bind a specific named or numbered parameter to the statement. The name can
-  // be a std::string, a "C string literal", or an int giving the column number.
+  // be a string, a "C string literal", or an int giving the column number.
   template <typename Name, typename Value>
   bool Set(Name name, Value value) {
     Reset();
@@ -385,7 +390,7 @@ class Statement {
   // Example:
   //
   // Statement stmt(db, "SELECT name, age FROM users WHERE alive;");
-  // for (const auto& [name, age] : stmt.Rows<std::string, int>()) {
+  // for (const auto& [name, age] : stmt.Rows<string, int>()) {
   //   cout << name << " is alive and " << age << " years old" << endl;
   // }
   // if (!stmt.done()) cerr << "oh no! " << stmt.errstr() << endl;
@@ -406,7 +411,7 @@ class Statement {
   inline bool ok() const { return rc_ == SQLITE_OK; }
   inline bool done() const { return rc_ == SQLITE_DONE; }
   inline int rc() const { return rc_; }
-  inline std::string_view errstr() const { return sqlite3_errstr(rc_); }
+  inline string_view errstr() const { return sqlite3_errstr(rc_); }
 
  private:
   // Iterator for rows produced by a Statement. Invalidated when the Statement

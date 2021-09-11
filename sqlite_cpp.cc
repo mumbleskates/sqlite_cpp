@@ -11,7 +11,7 @@
 
 namespace sqlite {
 
-int ExecRC(sqlite3* db, std::string_view script) {
+int ExecRC(sqlite3* db, string_view script) {
   // We compile and execute the script in long-form so that we can accept
   // string_views, which may not be nul-terminated; sqlite3_exec only accepts
   // nul-terminated strings.
@@ -35,7 +35,7 @@ int ExecRC(sqlite3* db, std::string_view script) {
   return SQLITE_OK;
 }
 
-Statement::Statement(sqlite3* db, std::string_view sql, bool must_compile_all) {
+Statement::Statement(sqlite3* db, string_view sql, bool must_compile_all) {
   const char* remainder = nullptr;
   rc_ = sqlite3_blocking_prepare_v2(db, sql.data(), sql.size(), &stmt_,
                                     &remainder);
