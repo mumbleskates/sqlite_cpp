@@ -146,6 +146,8 @@ int main(int argc, char* argv[]) {
     a = std::move(b);
     sqlite::Statement c(db, "select 3;");
     sqlite::Statement d(std::move(c));
+    // Self-move is normally a bug, but should neither double-free nor leak.
+    d = std::move(d);
   }
 
   // We use sqlite3_close() instead of sqlite3_close_v2() so that we can
