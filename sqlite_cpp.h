@@ -403,10 +403,6 @@ class Statement {
   // statement. A SqliteException will be thrown if the statement fails to run
   // or returns a row.
   inline SinkIterator Sink() { return SinkIterator(this); }
-  // Returns an output iterator for any kind of tuple that can be bound to this
-  // statement. A SqliteException will be thrown if the statement fails to run
-  // or returns a row. String values are copied instead of referenced.
-  inline SinkCopyIterator SinkCopy() { return SinkCopyIterator(this); }
 
   inline bool ok() const { return rc_ == SQLITE_OK; }
   inline bool done() const { return rc_ == SQLITE_DONE; }
@@ -486,39 +482,6 @@ class Statement {
 
     SinkIterator& operator++() { return *this; }
     AssignBinder operator*() { return AssignBinder(s_); }
-
-   private:
-    Statement* s_;
-  };
-
-  // Converts assignments to this object into BindTupleCopy calls on the wrapped
-  // statement.
-  class AssignCopyBinder {
-   public:
-    explicit AssignCopyBinder(Statement* s) : s_(s) {}
-
-    template <typename TupleCols>
-    AssignCopyBinder& operator=(const TupleCols& row) {
-      s_->ClearBinds();
-      s_->BindTupleCopy(row);
-      if (!s_->Run()) {
-        throw SqliteException(sqlite3_errstr(s_->rc()));
-      }
-      return *this;
-    }
-
-   private:
-    Statement* s_;
-  };
-
-  // Output iterator for any kind of row tuple. Invalidated when the Statement
-  // is moved or destroyed. String values are copied.
-  class SinkCopyIterator {
-   public:
-    explicit SinkCopyIterator(Statement* s) : s_(s) {}
-
-    SinkCopyIterator& operator++() { return *this; }
-    AssignCopyBinder operator*() { return AssignCopyBinder(s_); }
 
    private:
     Statement* s_;
