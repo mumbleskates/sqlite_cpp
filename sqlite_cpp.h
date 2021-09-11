@@ -429,8 +429,8 @@ class Statement {
       return *this;
     }
     value_type operator*() { return detail::ReadRow<Cols...>(s_->stmt_); }
-    bool operator==(const RowIterator& other) const {
-      return (s_ == other.s_) || (stopped() && other.stopped());
+    bool operator!=(const RowIterator& other) const {
+      return (s_ != other.s_) && !(stopped() && other.stopped());
     }
 
    private:
